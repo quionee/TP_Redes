@@ -15,18 +15,20 @@ class CRC:
     def calculaCRC(self, mensagem):
         # mensagem = mensagem.encode('ascii')
         mensagem = list(bin(45643 << 8)[2:])
-        print(mensagem)
+        print(''.join(mensagem))
 
         resultado = ""
         for i in range(len(mensagem) - self.grauPolinomio):
             if(mensagem[i] == '1'):
                 for j in range(len(self.polinomio)):
                     bitMensagem = int(mensagem[i])
-                    bitPolinomio = int(self.polinomio[i])
-                    mensagem[i] = str(bitMensagem ^ bitPolinomio)
-                    resultado += mensagem[i]
-        print(mensagem)
+                    bitPolinomio = int(self.polinomio[j])
+                    mensagem[i + j] = str(bitMensagem ^ bitPolinomio)
+                    print(bitMensagem, "xor", bitPolinomio, "=", mensagem[i + j])
+            resultado += mensagem[i]
+        print(''.join(mensagem))
         print(resultado)
+
 
         # resto = dx  % self.polinomioDecimal
         # resultado = int(('0b') + (bin(mensagem)[2:]) + (bin(resto)[2:]), base = 2)

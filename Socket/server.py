@@ -32,7 +32,7 @@ def main():
         dado = conexao.recv(tamanhoDado)
         print(dado.decode('ascii'))
 
-
+        confirmacao = DELIMITADOR
 
         # print(dado.decode('ascii'))
         conexao.sendall('ok'.encode('ascii'))
