@@ -1,56 +1,58 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# x ^ 16 + x ^ 15 + x ^ 2 + 1
+POLINOMIO = "11000000000000101"
+
 class CRC:
     polinomio = None
     polinomioDecimal = None
     grauPolinomio = None
     
-    def __init__(self, polinomio):
-        self.polinomio = '10011'
+    def __init__(self, polinomio = POLINOMIO):
+        self.polinomio = polinomio
         self.polinomioDecimal = int(self.polinomio, base=2)
         self.grauPolinomio = len(self.polinomio) - 1
         
     
-    def calculaCRC(self, mensagem):
-        # mensagem = mensagem.encode('ascii')
-        mensagem = list(bin(859 << len(self.polinomio)-1)[2:])
-        print(''.join(mensagem))
+    # retorna True se o resultado do CRC for 0 (exemplo: True)
+    # entrada: mensagem com bits de verificação inclusos (exemplo: "0b1110111101")
+    def verificaCRC(self, mensagem):
         print(mensagem)
-        for i in range(len(mensagem) - self.grauPolinomio-1):
+        mensagem = list(mensagem[2:])
+        resultado = "0b" + ''.join(self.calculaCRC(mensagem))
+        if(int(resultado, base = 2) == 0):
+            return True
+        return False
+
+
+    # retorna: um binario com a sequencia de bits gerada pelo calculo do CRC (exemplo: '0b01001')
+    # entrada: um valor binario (exemplo: '0b110100101001')
+    def geraCRC(self, mensagem):
+        mensagem = list(mensagem[2:] + ('0' * self.grauPolinomio))
+        retorno = "0b" + ''.join(self.calculaCRC(mensagem))
+        return retorno
+
+    # retorna: lista com caracteres de valores 1 ou 0 (exemplo: ['1', '0', '1'])
+    # entrada: recebe uma lista de caracteres com valores de 1 e 0 (exemplo: ['1', '0', '1'])
+    def calculaCRC(self, mensagem):
+        for i in range(len(mensagem) - self.grauPolinomio):
             if(mensagem[i] == '1'):
                 for j in range(len(self.polinomio)):
-                    bitMensagem = int(mensagem[i+j])
+                    bitMensagem = int(mensagem[i + j])
                     bitPolinomio = int(self.polinomio[j])
                     mensagem[i + j] = str(bitMensagem ^ bitPolinomio)
-                    # print(bitMensagem, "xor", bitPolinomio, "=", mensagem[i + j])
-        print(''.join(mensagem))
-        i = 0
-        while(mensagem[i] == '0'):
-            print(mensagem[i])
-            mensagem.pop(i)
-        print(mensagem)
 
-        ## ESSE É O TESTE QUE TEREMOS QUE FAZER DO LADO CLIENTE ##
-        # copiaMensagem = list(bin(859)[2:])
-        # copiaMensagem = copiaMensagem + mensagem
-        # print(''.join(copiaMensagem))
-        # for i in range(len(copiaMensagem) - self.grauPolinomio-1):
-        #     if(copiaMensagem[i] == '1'):
-        #         for j in range(len(self.polinomio)):
-        #             bitMensagem = int(copiaMensagem[i+j])
-        #             bitPolinomio = int(self.polinomio[j])
-        #             copiaMensagem[i + j] = str(bitMensagem ^ bitPolinomio)
-        #             print(bitMensagem, "xor", bitPolinomio, "=", copiaMensagem[i + j])
-        # print(''.join(copiaMensagem))
+        mensagem = mensagem[-self.grauPolinomio:]
+        return mensagem
 
-        # 45643
-        # 263
-    
-        # 1101011011
-        # 10011
-
-def main():
-    x = CRC("")
-    x.calculaCRC("")
-main()
+# def main(msg):
+#     x = CRC(POLINOMIO)
+#     print(msg)
+#     a = x.geraCRC(msg)
+#     t = msg + a[2:]
+#     if(x.verificaCRC(t)):
+#         print("OK")
+#     else:
+#         print("FUDEU")
+# main("0b1")
