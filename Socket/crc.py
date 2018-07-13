@@ -7,36 +7,43 @@ class CRC:
     grauPolinomio = None
     
     def __init__(self, polinomio):
-        self.polinomio = '100000111'
+        self.polinomio = '10011'
         self.polinomioDecimal = int(self.polinomio, base=2)
         self.grauPolinomio = len(self.polinomio) - 1
         
     
     def calculaCRC(self, mensagem):
         # mensagem = mensagem.encode('ascii')
-        mensagem = list(bin(45643 << 8)[2:])
+        mensagem = list(bin(859 << len(self.polinomio)-1)[2:])
         print(''.join(mensagem))
-
-        resultado = ""
-        for i in range(len(mensagem) - self.grauPolinomio):
+        print(mensagem)
+        for i in range(len(mensagem) - self.grauPolinomio-1):
             if(mensagem[i] == '1'):
                 for j in range(len(self.polinomio)):
-                    bitMensagem = int(mensagem[i])
+                    bitMensagem = int(mensagem[i+j])
                     bitPolinomio = int(self.polinomio[j])
                     mensagem[i + j] = str(bitMensagem ^ bitPolinomio)
-                    print(bitMensagem, "xor", bitPolinomio, "=", mensagem[i + j])
-            resultado += mensagem[i]
+                    # print(bitMensagem, "xor", bitPolinomio, "=", mensagem[i + j])
         print(''.join(mensagem))
-        print(resultado)
+        i = 0
+        while(mensagem[i] == '0'):
+            print(mensagem[i])
+            mensagem.pop(i)
+        print(mensagem)
 
+        ## ESSE É O TESTE QUE TEREMOS QUE FAZER DO LADO CLIENTE ##
+        # copiaMensagem = list(bin(859)[2:])
+        # copiaMensagem = copiaMensagem + mensagem
+        # print(''.join(copiaMensagem))
+        # for i in range(len(copiaMensagem) - self.grauPolinomio-1):
+        #     if(copiaMensagem[i] == '1'):
+        #         for j in range(len(self.polinomio)):
+        #             bitMensagem = int(copiaMensagem[i+j])
+        #             bitPolinomio = int(self.polinomio[j])
+        #             copiaMensagem[i + j] = str(bitMensagem ^ bitPolinomio)
+        #             print(bitMensagem, "xor", bitPolinomio, "=", copiaMensagem[i + j])
+        # print(''.join(copiaMensagem))
 
-        # resto = dx  % self.polinomioDecimal
-        # resultado = int(('0b') + (bin(mensagem)[2:]) + (bin(resto)[2:]), base = 2)
-        # print(resultado)
-
-        # print(resultado % self.polinomioDecimal)
-
-    
         # 45643
         # 263
     
