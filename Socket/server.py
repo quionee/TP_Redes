@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import socket
+import sys
 from crc import CRC
 
 # transforma um array de bytes em uma sequencia de bits
@@ -28,14 +29,18 @@ def juntaBytes(listaDeBytes):
         resultado += byte
     return resultado
 
-def main():
+def main(args):
+    SEQUENCIA_ZERO = bytes.fromhex('00')
+    SEQUENCIA_UM = bytes.fromhex('80')
     # flag delimitadora
     DELIMITADOR = bytes.fromhex('7e')
 
     # ACHO QUE TEM ALGO ERRADO AQUI
     # OLHEMOS DEPOIS
-
     HOST = '127.0.0.1'
+    if(len(args) > 1):
+        print(args[1])
+        HOST = args[1]
     PORT = 50017
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -45,15 +50,16 @@ def main():
         conexao, addr = sock.accept()
         print(conexao)
         fimMensagem = False
+        mensagemCompleta = ''
+        ultimoRecebido = '0b10000000'
         while (not fimMensagem):
             cabecalho = b''
             cabecalho += conexao.recv(1)
             if(len(cabecalho) <= 0):
                 fimMensagem = True
                 continue
-            print('Connected by', addr)
             # lista com todos os bytes recebidos
-
+            print('')
             listaBytes = leBytes(conexao, 10)
 
             # recebe os bytes do cabecalho
@@ -90,19 +96,36 @@ def main():
                 print("CRC invalido")
                 continue
 
-            print("dados:", dados.decode("ascii"))
-
             sequenciaACK = bytes([(cabecalho[2] & 0x80) + 1])
             print("SEQUENCIA ACK: ", sequenciaACK)
+            print("cabecalho 2:", (cabecalho[2] & 0x80))
+            if(int(ultimoRecebido, 2) ^ (cabecalho[2] & 0x80)):
+                print("mensagem completa:", mensagemCompleta)
+                mensagemCompleta += dados.decode("ascii")
+                ultimoRecebido = bin(int(ultimoRecebido, 2) ^ 0x80)
+            else:
+                print("Seq ACK 1:", sequenciaACK)
+                sequenciaACK = bytes([int.from_bytes(sequenciaACK, byteorder='big') ^ 0x80])
+                print("Seq ACK 2:", sequenciaACK)
+
+            print("ultimoRecebido", ultimoRecebido)
 
             origem = bytes(cabecalho[3:7])
             destino = bytes(cabecalho[7:11])
             
             confirmacao = DELIMITADOR + sequenciaACK + destino + origem
-            print("CONFIRMACAO: ", confirmacao)
-            conexao.send(confirmacao)
+            # print("CONFIRMACAO: ", confirmacao)
+            try:
+                conexao.send(confirmacao)
+            except:
+                continue
+        
+        print("TUDO:", mensagemCompleta)
 
-        conexao.shutdown(socket.SHUT_WR)
+        try:
+            conexao.shutdown(socket.SHUT_WR)
+        except:
+            continue
         conexao.close()
 
-main()
+main(sys.argv)

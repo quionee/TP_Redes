@@ -6,7 +6,17 @@ import socket
 import binascii
 import copy
 import time
+import os
+import signal
 from crc import CRC
+
+class TimeoutError(Exception):
+    pass
+
+def handle_timeout(signum, frame):
+    import errno
+    raise TimeoutError(os.strerror(errno.ETIME))
+
 
 # converte o texto para uma sequencia de bytes com oito bits exatos cada
 # retorno: binario (exemplo: "0b01101110")
@@ -125,13 +135,18 @@ def divideTexto(texto, TAM_DADOS):
 
 def main(args):
     # tamanho limite de dados do quadro
-    TAM_DADOS = 20
+    TAM_DADOS = 50
     # ip da maquina de destino
     ipDestino = "127.0.0.1"
     # ip da maquina de origem
     ipOrigem = "127.0.0.1"
     if(len(args) > 1):
-        ipDestino = args[1]
+        ipOrigem = args[1]
+        ipDestino = args[2]
+    
+    HOST = ipDestino
+    PORT = 50017
+    
     # divide o ip pelos pontos
     ipDestino = ipDestino.split(".")
     ipOrigem = ipOrigem.split(".")
@@ -146,36 +161,52 @@ def main(args):
     for i in range (len(mensagens)):
         mensagens[i] = geraQuadro(mensagens[i], copy.deepcopy(ipOrigem), copy.deepcopy(ipDestino), str(i % 2))
 
-    # OLHEM ISSO, BRENEEEEX !!!!!!!!!!!
-    # O HOST NAO ERA PRA SER IP DESTINO??
-    HOST = '127.0.0.1'
-    PORT = 50017
-
     # cria socket e estabelece conexao
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((HOST, PORT))
-
+    # sock.settimeout(1)
+    numeroSequenciaQuadro = 0
     i = 0
     while(i < len(mensagens)):
         # recebe resposta
-        sock.send(mensagens[i])
-        time.sleep(1)
-        delimitador = sock.recv(1)
-        sequenciaAckResposta = sock.recv(1)
-        origem = sock.recv(4)
-        destino = sock.recv(4)
-        print("DELMI", delimitador)
-        print("seqAckR: ", sequenciaAckResposta)
-        sequenciaAckResposta = int(binascii.hexlify(sequenciaAckResposta), 16)
 
-        print("seqAckRCCCC: ", sequenciaAckResposta)
-        if(not (sequenciaAckResposta & 1)):
+        signal.signal(signal.SIGALRM, handle_timeout)
+        signal.alarm(1)
+        try:
+            time.sleep(0.99887)
             sock.send(mensagens[i])
-            print("ENTREI NO IF")
-            continue
+            signal.alarm(0)
+            
+            print("")
+
+            delimitador = sock.recv(1)
+            sequenciaAckResposta = sock.recv(1)
+            
+            origem = sock.recv(4)
+            destino = sock.recv(4)
+            
+            sequenciaAckResposta = int(binascii.hexlify(sequenciaAckResposta), 16)
+
+            if(not(sequenciaAckResposta & 1)):
+                print("ACK veio com valor zero")
+                continue
+            
+            sequenciaAckResposta = sequenciaAckResposta & 0xf0
+
+            if(numeroSequenciaQuadro ^ sequenciaAckResposta):
+                print("ACK DUPLICADO")
+                continue
+
+            numeroSequenciaQuadro = numeroSequenciaQuadro ^ 0x80
+            print("OK")
+            i += 1
+
+        except TimeoutError:
+            print("Perdeu pacote")
+        finally:
+            signal.alarm(0)
         
-        print('Received', repr(sequenciaAckResposta))
-        i += 1
+            
     sock.shutdown(socket.SHUT_WR)
     sock.close()
 
@@ -183,3 +214,4 @@ main(sys.argv)
 
 
 # eu quero pao arroz queijo camerngbsfvsvos aea
+# mensagem imensa feita pra teste pq nao tenho paciencia de digitar porras muito grandes o tempo todo pq e chato p carai digitar toda hora uma mensagem afs a mensagem ta indo rapido jao desce mais pelamodedeus
