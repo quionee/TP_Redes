@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
 import socket
 import binascii
 import copy
@@ -42,7 +43,7 @@ def uneBytes(bitsEnderecoIp):
         novaSequenciaBits += byte[2:]
     return novaSequenciaBits
 
-def geraQuadro(texto, ipOrigem, ipDestino):
+def geraQuadro(texto, ipOrigem, ipDestino, bitNumeroSequencia):
     # flag delimitador ("~")
     DELIMITADOR = "0b01111110"
     
@@ -62,7 +63,7 @@ def geraQuadro(texto, ipOrigem, ipDestino):
     bitsTexto = completaASCII(texto)
 
     # byte da sequencia-ack
-    sequenciaACK = "0b00000000"
+    sequenciaACK = "0b" + bitNumeroSequencia + "0000000"
 
     destino = converteIpParaBinario(ipDestino)
     origem = converteIpParaBinario(ipOrigem)
@@ -122,14 +123,15 @@ def divideTexto(texto, TAM_DADOS):
     return mensagens
 
 
-def main():
+def main(args):
     # tamanho limite de dados do quadro
     TAM_DADOS = 20
     # ip da maquina de destino
     ipDestino = "127.0.0.1"
     # ip da maquina de origem
     ipOrigem = "127.0.0.1"
-
+    if(len(args) > 1):
+        ipDestino = args[1]
     # divide o ip pelos pontos
     ipDestino = ipDestino.split(".")
     ipOrigem = ipOrigem.split(".")
@@ -142,7 +144,7 @@ def main():
     mensagens = divideTexto(texto, TAM_DADOS)
 
     for i in range (len(mensagens)):
-        mensagens[i] = geraQuadro(mensagens[i], copy.deepcopy(ipOrigem), copy.deepcopy(ipDestino))
+        mensagens[i] = geraQuadro(mensagens[i], copy.deepcopy(ipOrigem), copy.deepcopy(ipDestino), str(i % 2))
 
     # OLHEM ISSO, BRENEEEEX !!!!!!!!!!!
     # O HOST NAO ERA PRA SER IP DESTINO??
@@ -177,7 +179,7 @@ def main():
     sock.shutdown(socket.SHUT_WR)
     sock.close()
 
-main()
+main(sys.argv)
 
 
 # eu quero pao arroz queijo camerngbsfvsvos aea
