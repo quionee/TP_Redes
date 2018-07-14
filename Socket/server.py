@@ -3,6 +3,7 @@
 
 import socket
 import sys
+import random
 from crc import CRC
 
 # transforma um array de bytes em uma sequencia de bits
@@ -88,18 +89,19 @@ def main(args):
 
             # transforma a lista de bytes em bits, completando zeros à esquerda
             mensagemBin = transformaEmBit(listaBytes)
+            if(random.random() > 0.95):
+                print("Invertendo")
+                posicao = random.randrange(0, tamanhoDados)
+                mensagemBin = list(mensagemBin)
+                mensagemBin[posicao] = bin(int(mensagemBin[posicao]) ^ 0x01)[2:]
             
             # verifica o CRC da mensagem
             crc = CRC()
-            if(not crc.verificaCRC(mensagemBin)):
-                # conexao.sendall('nop'.encode('ascii'))
-                print("CRC invalido")
-                continue
-
             sequenciaACK = bytes([(cabecalho[2] & 0x80) + 1])
             print("SEQUENCIA ACK: ", sequenciaACK)
             print("cabecalho 2:", (cabecalho[2] & 0x80))
-            if(int(ultimoRecebido, 2) ^ (cabecalho[2] & 0x80)):
+            
+            if((int(ultimoRecebido, 2) ^ (cabecalho[2] & 0x80)) and crc.verificaCRC(mensagemBin)):
                 print("mensagem completa:", mensagemCompleta)
                 mensagemCompleta += dados.decode("ascii")
                 ultimoRecebido = bin(int(ultimoRecebido, 2) ^ 0x80)
@@ -120,7 +122,7 @@ def main(args):
             except:
                 continue
         
-        print("TUDO:", mensagemCompleta)
+        # print("TUDO:", mensagemCompleta)
 
         try:
             conexao.shutdown(socket.SHUT_WR)
