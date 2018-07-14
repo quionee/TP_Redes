@@ -18,7 +18,6 @@ class CRC:
     # retorna True se o resultado do CRC for 0 (exemplo: True)
     # entrada: mensagem com bits de verificação inclusos (exemplo: "0b1110111101")
     def verificaCRC(self, mensagem):
-        print(mensagem)
         mensagem = list(mensagem[2:])
         resultado = "0b" + ''.join(self.calculaCRC(mensagem))
         if(int(resultado, base = 2) == 0):
@@ -45,14 +44,3 @@ class CRC:
 
         mensagem = mensagem[-self.grauPolinomio:]
         return mensagem
-
-# def main(msg):
-#     x = CRC(POLINOMIO)
-#     print(msg)
-#     a = x.geraCRC(msg)
-#     t = msg + a[2:]
-#     if(x.verificaCRC(t)):
-#         print("OK")
-#     else:
-#         print("FUDEU")
-# main("0b1")

@@ -3,6 +3,8 @@
 
 import socket
 import binascii
+import copy
+import time
 from crc import CRC
 
 # converte o texto para uma sequencia de bytes com oito bits exatos cada
@@ -24,7 +26,7 @@ def completaASCII(texto):
 
     return listaBinarios
 
-def converteIpBinario(ip):
+def converteIpParaBinario(ip):
     # deixa o ip com 8 bits
     for i in range(len(ip)):
         ip[i] = bin(int(ip[i]))[2:]
@@ -47,25 +49,28 @@ def geraQuadro(texto, ipOrigem, ipDestino):
     # tamanho do texto de entrada
     tamanho = bin(len(texto))
     tamanho = tamanho[2:]
+
     # deixa o tamanho com 8 bits
     while(len(tamanho) < 8):
         tamanho = "0" + tamanho
     tamanho = "0b" + tamanho
     
+    print("TAMANHO", int(tamanho, 2))
+
     # deixa cada caractere do texto com 8 bits e 
     # junta os bits do texto
     bitsTexto = completaASCII(texto)
 
-    # byte do ack
+    # byte da sequencia-ack
     sequenciaACK = "0b00000000"
 
-    destino = converteIpBinario(ipDestino)
-    origem = converteIpBinario(ipOrigem)
+    destino = converteIpParaBinario(ipDestino)
+    origem = converteIpParaBinario(ipOrigem)
 
-    # junta os bits do endereco de origem
+    # junta os bytes do endereco de origem
     bitsEnderecoOrigem = "0b" + uneBytes(origem)
 
-    # junta os bits do endereco de destino
+    # junta os bytes do endereco de destino
     bitsEnderecoDestino = "0b" + uneBytes(destino)
 
     # junta todos os bits
@@ -102,7 +107,7 @@ def geraQuadro(texto, ipOrigem, ipDestino):
     mensagem = bytes.fromhex(mensagem)
     return mensagem
 
-# divide um texto em varios cada um com tamanho TAM_DADOS
+# divide um texto em varios, cada um com tamanho TAM_DADOS
 def divideTexto(texto, TAM_DADOS):
     mensagens = []
     posicao = 0
@@ -130,7 +135,6 @@ def main():
     ipOrigem = ipOrigem.split(".")
 
     # print(ipOrigem, ipDestino)
-    
 
     # leitura do texto de entrada
     texto = input()
@@ -138,37 +142,42 @@ def main():
     mensagens = divideTexto(texto, TAM_DADOS)
 
     for i in range (len(mensagens)):
-        mensagens[i] = geraQuadro(mensagens[i], ipOrigem, ipDestino)
+        mensagens[i] = geraQuadro(mensagens[i], copy.deepcopy(ipOrigem), copy.deepcopy(ipDestino))
 
-    mensagem = mensagens[0]
-
-    # OLHEM ISSO !!!!!!!!!!!
+    # OLHEM ISSO, BRENEEEEX !!!!!!!!!!!
     # O HOST NAO ERA PRA SER IP DESTINO??
     HOST = '127.0.0.1'
     PORT = 50017
 
-    while True:
-        # cria socket e estabelece conexao
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((HOST, PORT))
-        
+    # cria socket e estabelece conexao
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((HOST, PORT))
+
+    i = 0
+    while(i < len(mensagens)):
         # recebe resposta
-        sock.sendall(mensagem)
-        sock.shutdown(socket.SHUT_WR)
-        
-        
+        sock.send(mensagens[i])
+        time.sleep(1)
         delimitador = sock.recv(1)
         sequenciaAckResposta = sock.recv(1)
-
+        origem = sock.recv(4)
+        destino = sock.recv(4)
+        print("DELMI", delimitador)
+        print("seqAckR: ", sequenciaAckResposta)
         sequenciaAckResposta = int(binascii.hexlify(sequenciaAckResposta), 16)
 
-        print("seqAckR: ", sequenciaAckResposta)
+        print("seqAckRCCCC: ", sequenciaAckResposta)
         if(not (sequenciaAckResposta & 1)):
-            # sock.sendall(mensagem)
+            sock.send(mensagens[i])
             print("ENTREI NO IF")
-
-        sock.close()
-
+            continue
+        
         print('Received', repr(sequenciaAckResposta))
-        return
+        i += 1
+    sock.shutdown(socket.SHUT_WR)
+    sock.close()
+
 main()
+
+
+# eu quero pao arroz queijo camerngbsfvsvos aea

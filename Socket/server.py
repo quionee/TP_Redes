@@ -14,6 +14,19 @@ def transformaEmBit(listaBytes):
         resultado += item
     return resultado
 
+def leBytes(conexao, qtdBytes):
+    listaBytes = []
+    for i in range(qtdBytes):
+        byteLido = conexao.recv(1)
+        # adiciona os dados do cabeçalho a uma lista de bytes
+        listaBytes.append(byteLido)
+    return listaBytes
+
+def juntaBytes(listaDeBytes):
+    resultado = b''
+    for byte in listaDeBytes:
+        resultado += byte
+    return resultado
 
 def main():
     # flag delimitadora
@@ -21,76 +34,73 @@ def main():
 
     # ACHO QUE TEM ALGO ERRADO AQUI
     # OLHEMOS DEPOIS
+
     HOST = '127.0.0.1'
     PORT = 50017
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((HOST, PORT))
     sock.listen(1)
-
     while True:
         conexao, addr = sock.accept()
-        print('Connected by', addr)
-        # lista com todos os bytes recebidos
-        listaBytes = []
+        print(conexao)
+        fimMensagem = False
+        while (not fimMensagem):
+            cabecalho = b''
+            cabecalho += conexao.recv(1)
+            if(len(cabecalho) <= 0):
+                fimMensagem = True
+                continue
+            print('Connected by', addr)
+            # lista com todos os bytes recebidos
 
-        # recebe os bytes do cabecalho
-        cabecalho = b''
-        cabecalho += conexao.recv(1)
-        print("CABECALHO: ", cabecalho)
-        for i in range(10):
-            byteLido = conexao.recv(1)
-            cabecalho += byteLido
-            # adiciona os dados do cabeçalho a uma lista de bytes
-            listaBytes.append(byteLido)
-        
-        print("CABECALHO: ", cabecalho)
+            listaBytes = leBytes(conexao, 10)
 
+            # recebe os bytes do cabecalho
+            # print("CABECALHO: ", cabecalho)  print("CABECALHO: ", cabecalho)
 
+            cabecalho += juntaBytes(listaBytes)
+            # print("CABECALHO: ", cabecalho)
 
+            tamanhoDados = cabecalho[1]
 
-        tamanhoDados = cabecalho[1]
+            # recebe os bytes de dados
+            listaDados = leBytes(conexao, tamanhoDados)
+            listaBytes += listaDados
+            dados = b'' + juntaBytes(listaDados)
 
-        # recebe os bytes de dados
-        dados = b""
-        for i in range(tamanhoDados):
-            dado = conexao.recv(1)
-            dados += dado
-            #adiciona os dados da mensagem a lista de bytes
-            listaBytes.append(dado)        
+            # print("dados: ", dados)
 
-        # recebe o codigo CRC gerado pelo cliente
-        # e o adiciona à lista de bytes
-        codigoCRC = conexao.recv(1)
-        listaBytes.append(codigoCRC)
-        codigoCRC = conexao.recv(1)
-        listaBytes.append(codigoCRC)
-        
-        print("lista de bytes:", listaBytes)
+            # recebe o codigo CRC gerado pelo cliente
+            # e o adiciona à lista de bytes
+            codigoCRC = conexao.recv(1)
+            listaBytes.append(codigoCRC)
+            codigoCRC = conexao.recv(1)
+            listaBytes.append(codigoCRC)
+            
+            # print("lista de bytes:", listaBytes)
 
-        # transforma a lista de bytes em bits, completando zeros à esquerda
-        mensagemBin = transformaEmBit(listaBytes)
-        
-        # verifica o CRC da mensagem
-        crc = CRC()
-        if(not crc.verificaCRC(mensagemBin)):
-            # conexao.sendall('nop'.encode('ascii'))
-            print("CRC invalido")
-            conexao.shutdown(socket.SHUT_WR)
-            conexao.close()
-            continue
+            # transforma a lista de bytes em bits, completando zeros à esquerda
+            mensagemBin = transformaEmBit(listaBytes)
+            
+            # verifica o CRC da mensagem
+            crc = CRC()
+            if(not crc.verificaCRC(mensagemBin)):
+                # conexao.sendall('nop'.encode('ascii'))
+                print("CRC invalido")
+                continue
 
+            print("dados:", dados.decode("ascii"))
 
-        print("dados:", dados.decode("ascii"))
+            sequenciaACK = bytes([(cabecalho[2] & 0x80) + 1])
+            print("SEQUENCIA ACK: ", sequenciaACK)
 
-        sequenciaACK = bytes([(cabecalho[2] & 0x80) + 1])
-        origem = bytes(cabecalho[3:7])
-        destino = bytes(cabecalho[7:11])
-        
-        confirmacao = DELIMITADOR + sequenciaACK + destino + origem
-        print("CONFIRMACAO: ", confirmacao)
-        conexao.sendall(confirmacao)
-
+            origem = bytes(cabecalho[3:7])
+            destino = bytes(cabecalho[7:11])
+            
+            confirmacao = DELIMITADOR + sequenciaACK + destino + origem
+            print("CONFIRMACAO: ", confirmacao)
+            conexao.send(confirmacao)
 
         conexao.shutdown(socket.SHUT_WR)
         conexao.close()
