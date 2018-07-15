@@ -149,7 +149,16 @@ def divideTexto(texto, TAM_DADOS):
     return mensagens
 
 # entrada: IP de origem e IP de destino (opcionais)
+# entrada: IP de origem e IP de destino (opcionais)
 def main(args):
+    # variáveis para cálculos estatísticos
+    MENSAGENS_ENVIADAS = 0
+    MENSAGENS_ENVIADAS_COM_SUCESSO = 0
+    MENSAGENS_RETRANSMITIDAS = 0
+    ERROS_DETECTADOS = 0
+    
+    
+    
     # tamanho limite de dados do quadro
     TAM_DADOS = 255
 
@@ -159,14 +168,14 @@ def main(args):
     ipOrigem = "127.0.0.1"
 
     # verifica se foram passados argumentos
-    if(len(args) == 2):
-        print("Número de argumentos inválido. Use zero ou dois argumentos.")
-        return
+#     if(len(args) == 2):
+#         print("Número de argumentos inválido. Use zero ou dois argumentos.")
+#         return
 
     # se os IPs foram passados como argumentos, são atribuídos às suas respectivas variáveis
-    if(len(args) > 1):
-        ipOrigem = args[1]
-        ipDestino = args[2]
+#     if(len(args) > 1):
+#         ipOrigem = args[1]
+#         ipDestino = args[2]
     
     HOST = ipDestino
     PORT = 50017
@@ -200,7 +209,10 @@ def main(args):
             # descomente a linha abaixo para simular estouro do time-out
             # time.sleep(0.9987)
             sock.send(mensagens[i])
-
+            
+            # incrementa número de mensagens enviadas
+            MENSAGENS_ENVIADAS += 1
+            
             # cancela excecao criada por estouro de tempo
             signal.alarm(0)
 
@@ -218,6 +230,10 @@ def main(args):
             # e a mensagem é reenviada
             if(not(sequenciaAckResposta & 1)):
                 print("Ocorreu um erro no envio da mensagem: confirmação inválida")
+                
+                # incrementa mensagens retransmitidas e erros detectados
+                MENSAGENS_RETRANSMITIDAS += 1
+                ERROS_DETECTADOS += 1
                 continue
 
             sequenciaAckResposta = sequenciaAckResposta & 0xf0
@@ -226,15 +242,27 @@ def main(args):
             # reenvia o quadro
             if(numeroSequenciaQuadro ^ sequenciaAckResposta):
                 print("ACK DUPLICADO")
+                
+                # incrementa mensagens retransmitidas e erros detectados
+                MENSAGENS_RETRANSMITIDAS += 1
+                ERROS_DETECTADOS += 1
                 continue
 
             # calcula o próximo número de sequência
             numeroSequenciaQuadro = numeroSequenciaQuadro ^ 0x80
             print("OK")
+            
+            # incrementa mensagens enviadas com sucesso
+            MENSAGENS_ENVIADAS_COM_SUCESSO += 1
+            
             i += 1
 
         # trata excecao gerada por estouro do time-out
         except TimeoutError:
+            # incrementa mensagens retransmitidas e erros detectados
+            MENSAGENS_RETRANSMITIDAS += 1
+            ERROS_DETECTADOS += 1
+            
             print("Perdeu pacote")
 
         # cancela a excecao gerada por estouro de time-out
@@ -244,6 +272,26 @@ def main(args):
     # finaliza transmissão
     sock.shutdown(socket.SHUT_WR)
     sock.close()
+    
+    # imprime estatísticas
+    print("Estatísticas:")
+    print("  - Quantidade de mensagens enviadas: {}".format(MENSAGENS_ENVIADAS))
+    
+    print("  - Quantidade de mensagens enviadas com sucesso: {} | {:.2f}%".format(
+        MENSAGENS_ENVIADAS_COM_SUCESSO,
+        MENSAGENS_ENVIADAS_COM_SUCESSO/MENSAGENS_ENVIADAS*100
+    ))
+    
+    print("  - Quantidade de mensagens retransmitidas: {} | {:.2f}%".format(
+        MENSAGENS_RETRANSMITIDAS,
+        MENSAGENS_RETRANSMITIDAS/MENSAGENS_ENVIADAS*100
+    ))
+    
+    print("  - Quantidade de erros detectados: {} | {:.2}%".format(
+        ERROS_DETECTADOS,
+        ERROS_DETECTADOS/MENSAGENS_ENVIADAS*100
+    ))
+    
 
 main(sys.argv)
 

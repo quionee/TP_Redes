@@ -45,7 +45,15 @@ def juntaBytes(listaDeBytes):
 
     return resultado
 
+# import socket
 def main(args):
+    # variáveis para cálculos estatísticos
+    MENSAGENS_RECEBIDAS = 0
+    MENSAGENS_COM_ERROS_NO_CRC = 0
+    MENSAGENS_DUPLICADAS = 0
+    MENSAGENS_CORRETAS = 0
+    
+    
     # flag delimitadora ("~")
     DELIMITADOR = bytes.fromhex('7e')
 
@@ -53,10 +61,10 @@ def main(args):
     HOST = '127.0.0.1'
 
     # se os IPs foram passados como argumentos, são atribuídos às suas respectivas variáveis
-    if(len(args) > 1):
-        print(args[1])
-        HOST = args[1]
-
+#     if(len(args) > 1):
+#         print(args[1])
+#         HOST = args[1]
+        
     PORT = 50017
 
     # inicializa o socket do servidor
@@ -76,6 +84,8 @@ def main(args):
         # o último número de sequência recebido
         ultimoRecebido = '0b10000000'
 
+        ipOrigem = None
+        
         print('')
         # o loop termina quando a mensagem for totalmente enviada
         while (not fimMensagem):
@@ -85,6 +95,9 @@ def main(args):
             if(len(cabecalho) <= 0):
                 fimMensagem = True
                 continue
+            
+            # incrementa mensagens recebidas
+            MENSAGENS_RECEBIDAS += 1
 
             # lista com todos os bytes recebidos
             listaBytes = leBytes(conexao, 10)
@@ -117,36 +130,75 @@ def main(args):
                 posicao = random.randrange(0, tamanhoDados)
                 mensagemBin = list(mensagemBin)
                 mensagemBin[posicao] = bin(int(mensagemBin[posicao]) ^ 0x01)[2:]
-            
+                
             # verifica o CRC da mensagem
             crc = CRC()
             sequenciaACK = bytes([(cabecalho[2] & 0x80) + 1])
 
+                
+            resultadoCRC = crc.verificaCRC(mensagemBin)
             # verifica se o número de sequência do último quadro recebido 
             # é diferente do quadro atual
             # também verifica (utilizando CRC) se os dados da mensagem foram corrompidos
-            if((int(ultimoRecebido, 2) ^ (cabecalho[2] & 0x80)) and crc.verificaCRC(mensagemBin)):
-                print("mensagem completa:", mensagemCompleta)
+            if((int(ultimoRecebido, 2) ^ (cabecalho[2] & 0x80)) and resultadoCRC):
+#                 print("mensagem completa:", mensagemCompleta)
                 mensagemCompleta += dados.decode("ascii")
                 ultimoRecebido = bin(int(ultimoRecebido, 2) ^ 0x80)
             # caso alguma das duas verificações seja falsa, reenvia o ack do último quadro recebido
             else:
                 sequenciaACK = bytes([int.from_bytes(sequenciaACK, byteorder='big') ^ 0x80])
+                
+                #
+                if(resultadoCRC):
+                    # incrementa erros de crc
+                    MENSAGENS_COM_ERRO_NO_CRC += 1
+                else:
+                    #incrementa mensagens duplicadas
+                    MENSAGENS_DUPLICADAS += 1
+                
 
             origem = bytes(cabecalho[3:7])
             destino = bytes(cabecalho[7:11])
             
+            ipOrigem = '{}.{}.{}.{}'.format(
+                cabecalho[7], cabecalho[8], cabecalho[9], cabecalho[10]
+            )
+            
             # monta o cabeçalho de confirmação
             confirmacao = DELIMITADOR + sequenciaACK + destino + origem
-
+            
+            # incrementa mensagens corretas
+            MENSAGENS_CORRETAS += 1
+            
             #tenta enviar a confirmação, se ocorrer algum erro, ignora
             try:
                 conexao.send(confirmacao)
             except:
                 continue
-
+        
+        print('IP de origem:', ipOrigem)
         # escreve a mensagem recebida
         print("Mensagem:", mensagemCompleta)
+        print("Estatísticas:")
+        
+        print("  - Quantidade de mensagens recebidas:", MENSAGENS_RECEBIDAS)
+        
+        print("  - Quantidade de mensagens com erros no CRC: {} | {:.2f}%".format(
+            MENSAGENS_COM_ERROS_NO_CRC,
+            MENSAGENS_COM_ERROS_NO_CRC/MENSAGENS_RECEBIDAS*100
+        ))
+        
+        print("  - Quantidade de mensagens duplicadas: {} | {:.2f}%".format(
+            MENSAGENS_DUPLICADAS,
+            MENSAGENS_DUPLICADAS/MENSAGENS_RECEBIDAS*100
+        ))
+        
+        print("  - Quantidade de mensagens corretas: {} | {:.2f}%".format(
+            MENSAGENS_CORRETAS,
+            MENSAGENS_CORRETAS/MENSAGENS_RECEBIDAS*100
+        ))
+        print()
+        
 
         # tenta finalizar a conexão, caso ocorra um erro, ignora
         try:
@@ -156,5 +208,6 @@ def main(args):
 
         # fecha a conexão
         conexao.close()
+        
 
 main(sys.argv)
