@@ -149,7 +149,6 @@ def divideTexto(texto, TAM_DADOS):
     return mensagens
 
 # entrada: IP de origem e IP de destino (opcionais)
-# entrada: IP de origem e IP de destino (opcionais)
 def main(args):
     # variáveis para cálculos estatísticos
     MENSAGENS_ENVIADAS = 0
@@ -228,9 +227,7 @@ def main(args):
 
             # se o bit da confirmação for zero, significa que ocorreu um erro
             # e a mensagem é reenviada
-            if(not(sequenciaAckResposta & 1)):
-                print("Ocorreu um erro no envio da mensagem: confirmação inválida")
-                
+            if(not(sequenciaAckResposta & 1)):   
                 # incrementa mensagens retransmitidas e erros detectados
                 MENSAGENS_RETRANSMITIDAS += 1
                 ERROS_DETECTADOS += 1
@@ -241,8 +238,6 @@ def main(args):
             # se o ack de confirmação não for referente ao último quadro enviado,
             # reenvia o quadro
             if(numeroSequenciaQuadro ^ sequenciaAckResposta):
-                print("ACK DUPLICADO")
-                
                 # incrementa mensagens retransmitidas e erros detectados
                 MENSAGENS_RETRANSMITIDAS += 1
                 ERROS_DETECTADOS += 1
@@ -250,7 +245,7 @@ def main(args):
 
             # calcula o próximo número de sequência
             numeroSequenciaQuadro = numeroSequenciaQuadro ^ 0x80
-            print("OK")
+            print('.', end = '')
             
             # incrementa mensagens enviadas com sucesso
             MENSAGENS_ENVIADAS_COM_SUCESSO += 1
@@ -262,8 +257,6 @@ def main(args):
             # incrementa mensagens retransmitidas e erros detectados
             MENSAGENS_RETRANSMITIDAS += 1
             ERROS_DETECTADOS += 1
-            
-            print("Perdeu pacote")
 
         # cancela a excecao gerada por estouro de time-out
         finally:
@@ -274,6 +267,7 @@ def main(args):
     sock.close()
     
     # imprime estatísticas
+    print()
     print("Estatísticas:")
     print("  - Quantidade de mensagens enviadas: {}".format(MENSAGENS_ENVIADAS))
     

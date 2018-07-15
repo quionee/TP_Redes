@@ -126,7 +126,7 @@ def main(args):
 
             # simulador de erro de transmissão com 5% de chance de alteração de um bit do quadro
             if(random.random() > 0.95):
-                print("Invertendo")
+#                 print("Invertendo")
                 posicao = random.randrange(0, tamanhoDados)
                 mensagemBin = list(mensagemBin)
                 mensagemBin[posicao] = bin(int(mensagemBin[posicao]) ^ 0x01)[2:]
@@ -144,14 +144,17 @@ def main(args):
 #                 print("mensagem completa:", mensagemCompleta)
                 mensagemCompleta += dados.decode("ascii")
                 ultimoRecebido = bin(int(ultimoRecebido, 2) ^ 0x80)
+
+                # incrementa mensagens corretas
+                MENSAGENS_CORRETAS += 1
+                print('.', end = '')
             # caso alguma das duas verificações seja falsa, reenvia o ack do último quadro recebido
             else:
                 sequenciaACK = bytes([int.from_bytes(sequenciaACK, byteorder='big') ^ 0x80])
                 
-                #
-                if(resultadoCRC):
+                if(not resultadoCRC):
                     # incrementa erros de crc
-                    MENSAGENS_COM_ERRO_NO_CRC += 1
+                    MENSAGENS_COM_ERROS_NO_CRC += 1
                 else:
                     #incrementa mensagens duplicadas
                     MENSAGENS_DUPLICADAS += 1
@@ -167,15 +170,13 @@ def main(args):
             # monta o cabeçalho de confirmação
             confirmacao = DELIMITADOR + sequenciaACK + destino + origem
             
-            # incrementa mensagens corretas
-            MENSAGENS_CORRETAS += 1
-            
             #tenta enviar a confirmação, se ocorrer algum erro, ignora
             try:
                 conexao.send(confirmacao)
             except:
                 continue
         
+        print()
         print('IP de origem:', ipOrigem)
         # escreve a mensagem recebida
         print("Mensagem:", mensagemCompleta)
@@ -198,6 +199,11 @@ def main(args):
             MENSAGENS_CORRETAS/MENSAGENS_RECEBIDAS*100
         ))
         print()
+        
+        MENSAGENS_RECEBIDAS = 0
+        MENSAGENS_COM_ERROS_NO_CRC = 0
+        MENSAGENS_DUPLICADAS = 0
+        MENSAGENS_CORRETAS = 0
         
 
         # tenta finalizar a conexão, caso ocorra um erro, ignora
