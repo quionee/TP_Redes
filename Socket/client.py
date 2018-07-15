@@ -164,7 +164,6 @@ def main(args):
         return
 
     # se os IPs foram passados como argumentos, são atribuídos às suas respectivas variáveis
-
     if(len(args) > 1):
         ipOrigem = args[1]
         ipDestino = args[2]
@@ -229,7 +228,7 @@ def main(args):
                 print("ACK DUPLICADO")
                 continue
 
-            # modifica o número de sequência
+            # calcula o próximo número de sequência
             numeroSequenciaQuadro = numeroSequenciaQuadro ^ 0x80
             print("OK")
             i += 1
@@ -237,12 +236,11 @@ def main(args):
         # trata excecao gerada por estouro do time-out
         except TimeoutError:
             print("Perdeu pacote")
-        
+
         # cancela a excecao gerada por estouro de time-out
         finally:
             signal.alarm(0)
-        
-    
+
     # finaliza transmissão
     sock.shutdown(socket.SHUT_WR)
     sock.close()
